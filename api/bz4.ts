@@ -32,6 +32,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // @ts-ignore
     const filePath = path.join(__dirname, '../sources/pixel_data_1.json');
+    const filePath2 = path.join(__dirname, '../sources/pixel_data_2.json');
+    const filePath3 = path.join(__dirname, '../sources/pixel_data_3.json');
+    const filePath4 = path.join(__dirname, '../sources/pixel_data_4.json');
     
     // Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
@@ -47,31 +50,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
     )
 
-    fs.readFile(filePath, 'utf8', async (err, data) => {
-        if (err) {
-            res.status(500).send('Error reading file');
-            return;
-        }
+    const filePaths = [filePath, filePath2, filePath3, filePath4];
+    const allData = [];
 
-        try {
-            const pixels = JSON.parse(data);
-            console.log('[]', pixels.length);
+    for (const path of filePaths) {
+        const data = fs.readFileSync(path, 'utf8');
+        allData.push(JSON.parse(data));
+    }
 
-            const password = 'aaakuangbaokouhaiguaizhangge';
-            
-            // Add a small delay between sends to prevent overwhelming the client
-            for (const pixel of pixels) {
-                // const encryptedData = encryptData(JSON.stringify(pixel), password);
-                // res.write(`data: ${JSON.stringify(encryptedData)}\n\n`);
-                res.write(`data: ${JSON.stringify(pixel)}\n\n`);
-                // Optional: Add a small delay between sends
-                await new Promise(resolve => setTimeout(resolve, 10));
-            }
+    try {
+        const password = 'aaakuangbaokouhaiguaizhangge';
+        
+        // Encrypt the combined JSON data
+        const encryptedData = encryptData(JSON.stringify(allData), password);
 
-            res.end();
-        } catch (error) {
-            console.error('Processing error:', error);
-            res.status(500).send('Error processing data');
-        }
-    });
+        // Send the encrypted data to the client
+        res.write(`data: ${JSON.stringify(encryptedData)}\n\n`);
+        res.end();
+    } catch (error) {
+        console.error('Processing error:', error);
+        res.status(500).send('Error processing data');
+    }
 }
